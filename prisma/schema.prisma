@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String        @id @default(cuid())
+  name            String        @unique
+  email           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  rooms_created   Room[]        @relation("RoomsCreated")
+  room_members    RoomMember[]  @relation("RoomMembers")
+
+  @@map("users")
+}
+
+model Room {
+  id               String        @id @default(uuid())
+  room_code        String        @unique
+  name             String
+  destination_name String
+  destination_lat  Decimal
+  destination_lng  Decimal
+  created_by       String
+  max_members      Int
+  status           String        @default("active")
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @updatedAt
+  expires_at       DateTime?
+  completed_at     DateTime?
+  creator          User          @relation("RoomsCreated", fields: [created_by], references: [id])
+  members          RoomMember[]  @relation("RoomMembers")
+
+  @@map("rooms")
+}
+
+model RoomMember {
+  id          String    @id @default(uuid())
+  room_id     String
+  user_id     String
+  nickname    String
+  role        String    @default("member")
+  status      String    @default("active")
+  joined_at   DateTime  @default(now())
+  left_at     DateTime?
+  last_seen   DateTime?
+  join_order  Int
+  room        Room      @relation("RoomMembers", fields: [room_id], references: [id], onDelete: Cascade)
+  user        User      @relation("RoomMembers", fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([room_id, user_id])
+  @@map("room_members")
+}

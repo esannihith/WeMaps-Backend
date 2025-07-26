@@ -8,11 +8,23 @@ export interface User {
 
 export interface SignInRequest {
   name: string;
+  password: string;
+}
+
+export interface SignUpRequest {
+  name: string;
+  password: string;
 }
 
 export interface SignInResponse {
   user: User;
+  token: string;
   isNewUser: boolean;
+}
+
+export interface SignUpResponse {
+  user: User;
+  token: string;
 }
 
 export interface UpdateUserRequest {

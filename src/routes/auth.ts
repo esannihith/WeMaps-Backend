@@ -1,26 +1,14 @@
 import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 import { prisma } from '../config/database';
-import { signInSchema } from '../utils/validation';
+import { signInSchema, signUpSchema } from '../utils/validation';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
+import { SignInRequest, SignUpRequest, SignInResponse, SignUpResponse } from '../types/auth';
 
 const router = Router();
 
-interface SignInRequest {
-  name: string;
-}
-
-interface SignInResponse {
-  user: {
-    id: string;
-    name: string;
-    email?: string;
-    createdAt: Date;
-    updatedAt: Date;
-  };
-  token: string;
-  isNewUser: boolean;
-}
+const SALT_ROUNDS = 12;
 
 // Sign in endpoint
 router.post('/signin', async (req: Request, res: Response) => {
@@ -34,49 +22,132 @@ router.post('/signin', async (req: Request, res: Response) => {
       });
     }
 
-    const { name } = value as SignInRequest;
+    const { name, password } = value as SignInRequest;
 
-    // Check if user exists
-    let user = await prisma.user.findUnique({
+    // Find user by name
+    const user = await prisma.user.findUnique({
       where: { name },
     });
     
-    let isNewUser = false;
-
     if (!user) {
-      // Create new user
-      user = await prisma.user.create({
-        data: { name },
+      return res.status(401).json({
+        error: 'Invalid credentials',
+        code: 'INVALID_CREDENTIALS',
       });
-      isNewUser = true;
     }
 
-    // Generate JWT token (no expiration)
+    // Check if user has a password (for migration compatibility)
+    if (!user.password) {
+      return res.status(401).json({
+        error: 'Please use the sign-up process to set your password',
+        code: 'PASSWORD_NOT_SET',
+      });
+    }
+
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    
+    if (!isValidPassword) {
+      return res.status(401).json({
+        error: 'Invalid credentials',
+        code: 'INVALID_CREDENTIALS',
+      });
+    }
+
+    // Generate JWT token
     const token = jwt.sign(
       { 
         userId: user.id,
         name: user.name,
       },
       process.env.JWT_SECRET || 'fallback-secret'
-      // No expiresIn option = no expiration
     );
 
     const response: SignInResponse = {
       user: {
         id: user.id,
         name: user.name,
-        email: user.email ?? undefined,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },
       token,
-      isNewUser,
+      isNewUser: false,
     };
 
     res.json(response);
 
   } catch (error: any) {
     console.error('Sign in error:', error);
+    
+    res.status(500).json({
+      error: 'Internal server error',
+      code: 'INTERNAL_ERROR',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+// Sign up endpoint
+router.post('/signup', async (req: Request, res: Response) => {
+  try {
+    const { error, value } = signUpSchema.validate(req.body);
+    
+    if (error) {
+      return res.status(400).json({
+        error: error.details[0].message,
+        code: 'VALIDATION_ERROR',
+      });
+    }
+
+    const { name, password } = value as SignUpRequest;
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { name },
+    });
+    
+    if (existingUser) {
+      return res.status(409).json({
+        error: 'Username already exists',
+        code: 'USERNAME_EXISTS',
+      });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+    // Create new user
+    const user = await prisma.user.create({
+      data: { 
+        name,
+        password: hashedPassword,
+        passwordCreatedAt: new Date(),
+      },
+    });
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        userId: user.id,
+        name: user.name,
+      },
+      process.env.JWT_SECRET || 'fallback-secret'
+    );
+
+    const response: SignUpResponse = {
+      user: {
+        id: user.id,
+        name: user.name,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+      token,
+    };
+
+    res.json(response);
+
+  } catch (error: any) {
+    console.error('Sign up error:', error);
     
     if (error.code === 'P2002') {
       return res.status(409).json({
@@ -102,7 +173,6 @@ router.get('/me', authenticateToken, async (req, res: Response) => {
       select: {
         id: true,
         name: true,
-        email: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -165,7 +235,6 @@ router.put('/me', authenticateToken, async (req, res: Response) => {
       select: {
         id: true,
         name: true,
-        email: true,
         createdAt: true,
         updatedAt: true,
       },

@@ -10,7 +10,8 @@ datasource db {
 model User {
   id              String        @id @default(cuid())
   name            String        @unique
-  email           String?
+  password        String        // Hashed password
+  passwordCreatedAt DateTime?   // Track when password was set
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   rooms_created   Room[]        @relation("RoomsCreated")

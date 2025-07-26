@@ -4,7 +4,9 @@ Express.js backend API for the WeMaps application with Prisma and PostgreSQL.
 
 ## Features
 
-- User authentication with name-based sign-in
+- User authentication with name+password based sign-in and sign-up
+- Secure password hashing with bcrypt (12 salt rounds)
+- JWT token-based authentication
 - PostgreSQL database with Prisma ORM
 - RESTful API endpoints
 - TypeScript support
@@ -85,7 +87,8 @@ Redis plays a crucial role in enabling real-time features and efficient data man
 ## API Endpoints
 
 ### Authentication
-- `POST /api/auth/signin` - Sign in or create user
+- `POST /api/auth/signin` - Sign in with name and password
+- `POST /api/auth/signup` - Create new user account with name and password  
 - `GET /api/auth/user?id={userId}` - Get user by ID
 - `PUT /api/auth/user` - Update user information
 

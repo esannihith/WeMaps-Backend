@@ -6,7 +6,6 @@ export interface AuthenticatedRequest extends Request {
   user: {
     id: string;
     name: string;
-    email?: string;
   };
 }
 
@@ -31,7 +30,7 @@ export const authenticateToken = async (
     // Verify user still exists
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, name: true, email: true },
+      select: { id: true, name: true },
     });
 
     if (!user) {
@@ -44,7 +43,6 @@ export const authenticateToken = async (
     (req as AuthenticatedRequest).user = {
       id: user.id,
       name: user.name,
-      email: user.email ?? undefined,
     };
     next();
   } catch (error) {
@@ -78,14 +76,13 @@ export const optionalAuth = async (
       
       const user = await prisma.user.findUnique({
         where: { id: decoded.userId },
-        select: { id: true, name: true, email: true },
+        select: { id: true, name: true },
       });
 
       if (user) {
         (req as AuthenticatedRequest).user = {
           id: user.id,
           name: user.name,
-          email: user.email ?? undefined,
         };
       }
     }

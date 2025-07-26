@@ -1,7 +1,6 @@
 export interface User {
   id: string;
   name: string;
-  email?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,5 +29,4 @@ export interface SignUpResponse {
 export interface UpdateUserRequest {
   id: string;
   name?: string;
-  email?: string;
 }

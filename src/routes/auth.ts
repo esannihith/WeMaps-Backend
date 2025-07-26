@@ -202,9 +202,9 @@ router.get('/me', authenticateToken, async (req, res: Response) => {
 router.put('/me', authenticateToken, async (req, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const { name, email } = req.body;
+    const { name } = req.body;
     
-    const updates: { name?: string; email?: string } = {};
+    const updates: { name?: string } = {};
     
     if (name && typeof name === 'string') {
       const trimmedName = name.trim();
@@ -216,10 +216,6 @@ router.put('/me', authenticateToken, async (req, res: Response) => {
           code: 'INVALID_NAME',
         });
       }
-    }
-
-    if (email && typeof email === 'string') {
-      updates.email = email.trim();
     }
 
     if (Object.keys(updates).length === 0) {

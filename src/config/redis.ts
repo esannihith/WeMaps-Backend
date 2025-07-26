@@ -4,11 +4,8 @@ dotenv.config();
 
 
 const redisClient = createClient({
-  username: process.env.REDIS_USERNAME || 'default',
-  password: process.env.REDIS_PASSWORD,
+  url: process.env.REDIS_URL,
   socket: {
-    host: process.env.REDIS_HOST,
-    port: parseInt(process.env.REDIS_PORT || '6379'),
     reconnectStrategy: (retries) => Math.min(retries * 50, 500),
   },
 });
@@ -33,7 +30,6 @@ export const connectRedis = async () => {
   try {
     if (!redisClient.isOpen) {
       await redisClient.connect();
-      console.log('Connected to Redis');
     }
   } catch (error) {
     console.error('Failed to connect to Redis:', error);
